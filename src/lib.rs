@@ -70,7 +70,7 @@
 //! }
 //! "#;
 //!
-//! let geojson = geojson_str.parse::<GeoJson>().unwrap();
+//! let geojson = geojson_str.parse::<GeoJson<(f64, f64)>>().unwrap();
 //! ```
 //!
 //! ## Writing
@@ -128,10 +128,10 @@
 //! ownership of it.
 //!
 //! ```rust
-//! use geojson::{GeoJson, Geometry, Value};
+//! use geojson::{GeoJson, Geometry, Position, Value};
 //!
 //! /// Process top-level GeoJSON items
-//! fn process_geojson(gj: &GeoJson) {
+//! fn process_geojson<Pos: Position>(gj: &GeoJson<Pos>) {
 //!     match *gj {
 //!         GeoJson::FeatureCollection(ref ctn) => {
 //!             for feature in &ctn.features {
@@ -150,7 +150,7 @@
 //! }
 //!
 //! /// Process GeoJSON geometries
-//! fn match_geometry(geom: &Geometry) {
+//! fn match_geometry<Pos: Position>(geom: &Geometry<Pos>) {
 //!     match geom.value {
 //!         Value::Polygon(_) => println!("Matched a Polygon"),
 //!         Value::MultiPolygon(_) => println!("Matched a MultiPolygon"),
@@ -199,7 +199,7 @@
 //!       ]
 //!     }
 //!     "#;
-//!     let geojson = geojson_str.parse::<GeoJson>().unwrap();
+//!     let geojson = geojson_str.parse::<GeoJson<(f64, f64)>>().unwrap();
 //!     process_geojson(&geojson);
 //! }
 //! ```
@@ -279,7 +279,7 @@
 //! }
 //! "#;
 //! # #[cfg(feature = "geo-types")]
-//! let geojson = GeoJson::from_str(geojson_str).unwrap();
+//! let geojson = GeoJson::<Vec<f64>>::from_str(geojson_str).unwrap();
 //! // Turn the GeoJSON string into a geo_types Geometry
 //! # #[cfg(feature = "geo-types")]
 //! let geom: geo_types::Geometry<f64> = geojson.try_into().unwrap();
@@ -307,16 +307,10 @@ use serde_json;
 /// [GeoJSON Format Specification § 5](https://tools.ietf.org/html/rfc7946#section-5)
 pub type Bbox = Vec<f64>;
 
-/// Positions
-///
-/// [GeoJSON Format Specification § 3.1.1](https://tools.ietf.org/html/rfc7946#section-3.1.1)
-pub type Position = Vec<f64>;
-
-pub type PointType = Position;
-pub type LineStringType = Vec<Position>;
-pub type PolygonType = Vec<Vec<Position>>;
-
 mod util;
+
+mod position;
+pub use position::Position;
 
 mod geojson;
 pub use crate::geojson::GeoJson;
@@ -338,11 +332,13 @@ mod conversion;
 #[cfg(feature = "geo-types")]
 pub use conversion::quick_collection;
 
+pub type DefaultPositionImpl = Vec<f64>;
+
 /// Feature Objects
 ///
 /// [GeoJSON Format Specification § 3.2](https://tools.ietf.org/html/rfc7946#section-3.2)
 #[derive(Clone, Debug, PartialEq)]
-pub struct Feature {
+pub struct Feature<Pos: Position = DefaultPositionImpl> {
     /// Bounding Box
     ///
     /// [GeoJSON Format Specification § 5](https://tools.ietf.org/html/rfc7946#section-5)
@@ -350,7 +346,7 @@ pub struct Feature {
     /// Geometry
     ///
     /// [GeoJSON Format Specification § 3.2](https://tools.ietf.org/html/rfc7946#section-3.2)
-    pub geometry: Option<Geometry>,
+    pub geometry: Option<Geometry<Pos>>,
     /// Identifier
     ///
     /// [GeoJSON Format Specification § 3.2](https://tools.ietf.org/html/rfc7946#section-3.2)

@@ -18,8 +18,8 @@ use crate::geo_types::{
     MultiLineString as GtMultiLineString, MultiPoint as GtMultiPoint,
     MultiPolygon as GtMultiPolygon, Point as GtPoint, Polygon as GtPolygon,
 };
-use crate::geojson::GeoJson;
-use crate::geojson::GeoJson::{Feature, FeatureCollection, Geometry};
+use crate::geojson::GeoJson::{self, Feature, FeatureCollection, Geometry};
+use crate::Position;
 
 use crate::geometry::Geometry as GjGeometry;
 use crate::Error as GJError;
@@ -74,7 +74,9 @@ pub(crate) mod from_geo_types;
 pub(crate) mod to_geo_types;
 
 // Process top-level `GeoJSON` items, returning a geo_types::GeometryCollection or an Error
-fn process_geojson<T>(gj: &GeoJson) -> Result<geo_types::GeometryCollection<T>, GJError>
+fn process_geojson<T, Pos: Position>(
+    gj: &GeoJson<Pos>,
+) -> Result<geo_types::GeometryCollection<T>, GJError<Pos>>
 where
     T: Float,
 {
@@ -100,7 +102,9 @@ where
 }
 
 // Process GeoJson Geometry objects, returning their geo_types equivalents, or an error
-fn process_geometry<T>(geometry: &GjGeometry) -> Result<geo_types::Geometry<T>, GJError>
+fn process_geometry<T, Pos: Position>(
+    geometry: &GjGeometry<Pos>,
+) -> Result<geo_types::Geometry<T>, GJError<Pos>>
 where
     T: Float,
 {
@@ -123,7 +127,7 @@ where
             let gc = GtGeometry::GeometryCollection(GeometryCollection(
                 gc.iter()
                     .map(|geom| process_geometry(&geom))
-                    .collect::<Result<Vec<geo_types::Geometry<T>>, GJError>>()?,
+                    .collect::<Result<Vec<geo_types::Geometry<T>>, GJError<Pos>>>()?,
             ));
             Ok(gc)
         }
@@ -164,7 +168,9 @@ where
 /// let mut collection: GeometryCollection<f64> = quick_collection(&geojson).unwrap();
 /// ```
 #[cfg_attr(docsrs, doc(cfg(feature = "geo-types")))]
-pub fn quick_collection<T>(gj: &GeoJson) -> Result<geo_types::GeometryCollection<T>, GJError>
+pub fn quick_collection<T, Pos: Position>(
+    gj: &GeoJson<Pos>,
+) -> Result<geo_types::GeometryCollection<T>, GJError<Pos>>
 where
     T: Float,
 {
